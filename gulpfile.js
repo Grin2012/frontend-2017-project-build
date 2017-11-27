@@ -6,13 +6,13 @@ var rename = require('gulp-rename');
 var browserSync = require('browser-sync').create();
 
 var path = {
-    css:  './src/styles/*.scss',
+    css:  './src/**/*.scss',
     html: {
-        pages: './src/pages/*.hbs',
+        pages: './src/pages/**/*.hbs',
         partials: './src/partials/'
     },
     dist: {
-      css:  './dist/styles/',
+      css:  './dist/',
       html: './dist/'
     }
 };
@@ -33,6 +33,7 @@ gulp.task('html', function () {
             batch: [path.html.partials]
         }))
         .pipe(rename({
+            dirname: '.',
             extname: '.html'
         }))
         .pipe(gulp.dest(path.dist.html));
