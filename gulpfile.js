@@ -1,19 +1,35 @@
 var gulp = require('gulp');
 var sass = require('gulp-sass');
-var handlebars = require('gulp-compile-handlebars');
+var compileHandlebars = require('gulp-compile-handlebars');
+var handlebars = require('gulp-handlebars');
+var wrap = require('gulp-wrap');
+var declare = require('gulp-declare');
 var rename = require('gulp-rename');
+var concat = require('gulp-concat');
 var browserSync = require('browser-sync').create();
 
 var path = {
-    css:  './src/*.scss',
-    html: {
-        pages: './src/pages/**/*.hbs',
-        partials: './src/partials/'
-    },
-    dist: {
-      css:  './dist/',
-      html: './dist/'
+  css: './src/*.scss',
+  js: './src/scripts/*.js',
+  mockapi: './src/mockapi/*.json',
+  html: {
+    pages: './src/pages/**/*.hbs',
+    partials: './src/partials/',
+    templates: './src/templates/**/*.hbs'
+  },
+  vendor: {
+    js: './src/vendor/js/*.js'
+  },
+  dist: {
+    css:  './dist/',
+    js:  './dist/',
+    mockapi: './dist/mockapi/',
+    html: './dist/',
+    templates: './dist/',
+    vendor: {
+      js: './dist/'
     }
+  }
 };
 
 gulp.task('default', ['build', 'serve', 'watch']);
@@ -24,25 +40,65 @@ gulp.task('css', function () {
     .pipe(gulp.dest(path.dist.css));
 });
 
-gulp.task('html', function () {
-    return gulp.src(path.html.pages)
-        .pipe(handlebars({}, {
-            ignorePartials: true,
-            batch: [path.html.partials]
-        }))
-        .pipe(rename({
-            dirname: '.',
-            extname: '.html'
-        }))
-        .pipe(gulp.dest(path.dist.html));
+gulp.task('js', function () {
+  return gulp.src(path.js)
+    .pipe(gulp.dest(path.dist.js));
 });
 
-gulp.task('build', ['html', 'css']);
+gulp.task('vendor_js', function () {
+  return gulp.src(path.vendor.js)
+    .pipe(concat('vendor.js'))
+    .pipe(gulp.dest(path.dist.vendor.js));
+});
+
+gulp.task('html', function () {
+  return gulp.src(path.html.pages)
+    .pipe(compileHandlebars({}, {
+      ignorePartials: true,
+      batch: path.html.partials
+    }))
+    .pipe(rename({
+      dirname: '.',
+      extname: '.html'
+    }))
+    .pipe(gulp.dest(path.dist.html));
+});
+
+gulp.task('hbs_templates', function() {
+  return gulp.src(path.html.templates)
+    .pipe(handlebars({
+      handlebars: require('handlebars')
+    }))
+    .pipe(wrap('Handlebars.template(<%= contents %>)'))
+    .pipe(declare({
+      namespace: 'blocks.templates',
+      noRedeclare: true
+    }))
+    .pipe(concat('templates.js'))
+    .pipe(gulp.dest(path.dist.templates))
+});
+
+gulp.task('mockapi', function() {
+  return gulp.src(path.mockapi)
+    .pipe(gulp.dest(path.dist.mockapi))
+});
+
+gulp.task('build', [
+  'html',
+  'css',
+  'js',
+  'hbs_templates',
+  'mockapi',
+  'vendor_js'
+]);
 
 gulp.task('watch', function () {
   gulp.watch(path.css, ['css']);
+  gulp.watch(path.js, ['js']);
   gulp.watch(path.html.pages, ['html']);
+  gulp.watch(path.html.templates, ['hbs_templates']);
   gulp.watch(path.html.partials, ['html']);
+  gulp.watch(path.mockapi, ['mockapi']);
 });
 
 gulp.task('serve', ['watch'], function() {
